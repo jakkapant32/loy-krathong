@@ -1,0 +1,31 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Wish {
+  id          String   @id @default(cuid())
+  name        String
+  wish        String
+  krathong    String   // banana-leaf, lotus, bread, coconut
+  location    String   // chaophraya, chiangmai, etc.
+  locationLat Float?   // latitude for map
+  locationLng Float?   // longitude for map
+  isPublic    Boolean  @default(true)
+  isCouple    Boolean  @default(false)
+  partnerName String?  // สำหรับลอยคู่
+  partnerWish String?  // สำหรับลอยคู่
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([isPublic, createdAt])
+  @@index([location])
+}
+

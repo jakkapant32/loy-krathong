@@ -1,0 +1,21 @@
+services:
+  - type: web
+    name: loy-krathong
+    env: node
+    buildCommand: npm install && npx prisma generate && npm run build
+    startCommand: npm start
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: DATABASE_URL
+        fromDatabase:
+          name: loy-krathong-db
+          property: connectionString
+    healthCheckPath: /
+    autoDeploy: true
+
+databases:
+  - name: loy-krathong-db
+    plan: free
+    databaseName: loy_krathong
+    user: loy_krathong_user
