@@ -12,7 +12,6 @@ const MapContainer = dynamic(() => import('react-leaflet').then(mod => mod.MapCo
 const TileLayer = dynamic(() => import('react-leaflet').then(mod => mod.TileLayer), { ssr: false })
 const Marker = dynamic(() => import('react-leaflet').then(mod => mod.Marker), { ssr: false })
 const Popup = dynamic(() => import('react-leaflet').then(mod => mod.Popup), { ssr: false })
-const useMap = dynamic(() => import('react-leaflet').then(mod => mod.useMap), { ssr: false })
 
 interface Wish {
   id: string
@@ -71,17 +70,23 @@ const createKrathongIcon = (emoji: string) => {
   })
 }
 
-// Component for fitting map bounds
-function MapBoundsComponent({ bounds }: { bounds: [[number, number], [number, number]] }) {
-  const { useMap } = require('react-leaflet')
-  const map = useMap()
-  useEffect(() => {
-    if (map && bounds) {
-      map.fitBounds(bounds, { padding: [50, 50] })
+// Component for fitting map bounds - must be inside MapContainer
+// This component uses useMap hook which must be inside MapContainer context
+const MapBoundsComponent = dynamic(
+  () => import('react-leaflet').then((mod) => {
+    const { useMap } = mod
+    return function MapBoundsInner({ bounds }: { bounds: [[number, number], [number, number]] }) {
+      const map = useMap()
+      useEffect(() => {
+        if (map && bounds) {
+          map.fitBounds(bounds, { padding: [50, 50] })
+        }
+      }, [map, bounds])
+      return null
     }
-  }, [map, bounds])
-  return null
-}
+  }),
+  { ssr: false }
+)
 
 export default function KrathongMap({ onBack }: { onBack: () => void }) {
   const [wishes, setWishes] = useState<Wish[]>([])
