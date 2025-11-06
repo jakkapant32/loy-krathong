@@ -11,26 +11,25 @@ export async function GET(request: NextRequest) {
     const searchParams = request.nextUrl.searchParams
     const myWishIds = searchParams.get('myWishIds') // รายการ wish IDs ที่ผู้ใช้ลอยเอง
 
-    let whereClause: any = {}
-
-    // ถ้ามี myWishIds ให้แสดงเฉพาะของตัวเอง
-    if (myWishIds) {
-      const wishIds = myWishIds.split(',').filter(id => id.trim())
-      if (wishIds.length > 0) {
-        whereClause.id = { in: wishIds }
-      }
-      // ถ้า myWishIds ว่างเปล่า ให้ดึงทั้งหมด (whereClause จะยังคงว่างเปล่า)
-    }
-    // ถ้าไม่มี myWishIds ให้ดึงทั้งหมด (whereClause จะยังคงว่างเปล่า)
-
     // ตรวจสอบ database connection ก่อน
     try {
+      // สร้าง where clause - ถ้ามี myWishIds ให้กรองตาม ID
+      let whereClause: any = undefined
+      
+      if (myWishIds) {
+        const wishIds = myWishIds.split(',').filter(id => id.trim())
+        if (wishIds.length > 0) {
+          whereClause = { id: { in: wishIds } }
+        }
+        // ถ้า myWishIds ว่างเปล่า ให้ whereClause เป็น undefined (ดึงทั้งหมด)
+      }
+      // ถ้าไม่มี myWishIds ให้ whereClause เป็น undefined (ดึงทั้งหมด)
+
       // ดึง wishes ทั้งหมดที่มี location (ไม่ว่าจะมี coordinates หรือไม่)
       // Frontend จะแปลง location string เป็น coordinates เอง
       // location เป็น required field อยู่แล้ว ไม่ต้องเช็ค null
       // ไม่ส่ง wish field เพื่อไม่แสดงข้อความคำอธิษฐาน
-      const wishes = await prisma.wish.findMany({
-        where: whereClause,
+      const queryOptions: any = {
         orderBy: { createdAt: 'desc' },
         take: 1000, // จำกัดจำนวนสำหรับแผนที่
         select: {
@@ -45,7 +44,14 @@ export async function GET(request: NextRequest) {
           partnerName: true,
           createdAt: true,
         },
-      })
+      }
+
+      // เพิ่ม where clause เฉพาะเมื่อมี
+      if (whereClause) {
+        queryOptions.where = whereClause
+      }
+
+      const wishes = await prisma.wish.findMany(queryOptions)
 
       return NextResponse.json({ success: true, wishes })
     } catch (dbError) {
