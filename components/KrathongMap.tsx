@@ -98,35 +98,58 @@ export default function KrathongMap({ onBack }: { onBack: () => void }) {
         // ดึงเฉพาะคำอธิษฐานของตัวเองจาก localStorage
         const myWishIds = JSON.parse(localStorage.getItem('myWishes') || '[]')
         
+        console.log('My Wish IDs from localStorage:', myWishIds)
+        
         if (myWishIds.length === 0) {
+          console.log('No wish IDs found in localStorage')
           setWishes([])
           setLoading(false)
           return
         }
 
-        const response = await fetch(`/api/wishes/map?myWishIds=${myWishIds.join(',')}`)
+        const url = `/api/wishes/map?myWishIds=${myWishIds.join(',')}`
+        console.log('Fetching map data from:', url)
+        
+        const response = await fetch(url)
         const data = await response.json()
-        if (data.success) {
+        
+        console.log('Map API response:', data)
+        
+        if (data.success && data.wishes) {
+          console.log('Received wishes:', data.wishes.length)
+          
           // ใช้ coordinates จาก location ถ้าไม่มี lat/lng
-          const wishesWithCoords = data.wishes.map((wish: Wish) => {
-            if (!wish.locationLat || !wish.locationLng) {
-              const coords = locationCoordinates[wish.location] || locationCoordinates['bangkok']
-              return { 
-                ...wish, 
-                locationLat: coords.lat, 
-                locationLng: coords.lng,
-                locationName: coords.name || wish.location
+          const wishesWithCoords = data.wishes
+            .map((wish: Wish) => {
+              if (!wish.locationLat || !wish.locationLng) {
+                const coords = locationCoordinates[wish.location] || locationCoordinates['bangkok']
+                if (!coords) {
+                  console.warn(`No coordinates found for location: ${wish.location}`)
+                  return null
+                }
+                return { 
+                  ...wish, 
+                  locationLat: coords.lat, 
+                  locationLng: coords.lng,
+                  locationName: coords.name || wish.location
+                }
               }
-            }
-            return {
-              ...wish,
-              locationName: locationCoordinates[wish.location]?.name || wish.location
-            }
-          })
+              return {
+                ...wish,
+                locationName: locationCoordinates[wish.location]?.name || wish.location
+              }
+            })
+            .filter((wish: Wish | null) => wish !== null) // กรอง null ออก
+            
+          console.log('Wishes with coordinates:', wishesWithCoords.length)
           setWishes(wishesWithCoords)
+        } else {
+          console.log('API returned unsuccessful or no wishes:', data)
+          setWishes([])
         }
       } catch (error) {
         console.error('Error fetching map data:', error)
+        setWishes([])
       } finally {
         setLoading(false)
       }
