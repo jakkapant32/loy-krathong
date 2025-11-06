@@ -5,36 +5,36 @@ import { prisma } from '@/lib/prisma'
 export const dynamic = 'force-dynamic'
 
 // GET - ดึงข้อมูลสำหรับแผนที่ (รองรับทั้งที่มี coordinates และ location string)
+// ถ้ามี myWishIds ให้แสดงเฉพาะของตัวเอง ถ้าไม่มีให้แสดงทั้งหมด
 export async function GET(request: NextRequest) {
   try {
     const searchParams = request.nextUrl.searchParams
     const myWishIds = searchParams.get('myWishIds') // รายการ wish IDs ที่ผู้ใช้ลอยเอง
 
-    // ถ้ามี myWishIds ให้แสดงเฉพาะของตัวเอง
-    if (!myWishIds) {
-      // ถ้าไม่มี myWishIds ให้ return empty (ไม่แสดงอะไรเลย)
-      return NextResponse.json({ success: true, wishes: [] })
-    }
+    let whereClause: any = {}
 
-    const wishIds = myWishIds.split(',').filter(id => id.trim())
-    if (wishIds.length === 0) {
-      // ถ้าไม่มี wish IDs ให้ return empty array
-      return NextResponse.json({ success: true, wishes: [] })
+    // ถ้ามี myWishIds ให้แสดงเฉพาะของตัวเอง
+    if (myWishIds) {
+      const wishIds = myWishIds.split(',').filter(id => id.trim())
+      if (wishIds.length > 0) {
+        whereClause.id = { in: wishIds }
+      }
+      // ถ้า myWishIds ว่างเปล่า ให้ดึงทั้งหมด (whereClause จะยังคงว่างเปล่า)
     }
+    // ถ้าไม่มี myWishIds ให้ดึงทั้งหมด (whereClause จะยังคงว่างเปล่า)
 
     // ดึง wishes ทั้งหมดที่มี location (ไม่ว่าจะมี coordinates หรือไม่)
     // Frontend จะแปลง location string เป็น coordinates เอง
     // location เป็น required field อยู่แล้ว ไม่ต้องเช็ค null
+    // ไม่ส่ง wish field เพื่อไม่แสดงข้อความคำอธิษฐาน
     const wishes = await prisma.wish.findMany({
-      where: {
-        id: { in: wishIds },
-      },
+      where: whereClause,
       orderBy: { createdAt: 'desc' },
       take: 1000, // จำกัดจำนวนสำหรับแผนที่
       select: {
         id: true,
         name: true,
-        wish: true,
+        // ไม่ส่ง wish field เพื่อไม่แสดงข้อความคำอธิษฐาน
         krathong: true,
         location: true,
         locationLat: true,

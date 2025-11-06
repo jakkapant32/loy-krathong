@@ -16,7 +16,7 @@ const Popup = dynamic(() => import('react-leaflet').then(mod => mod.Popup), { ss
 interface Wish {
   id: string
   name: string
-  wish: string
+  // ไม่มี wish field เพื่อไม่แสดงข้อความคำอธิษฐาน
   krathong: string
   location: string
   locationLat: number | null
@@ -95,19 +95,16 @@ export default function KrathongMap({ onBack }: { onBack: () => void }) {
   useEffect(() => {
     const fetchMapData = async () => {
       try {
-        // ดึงเฉพาะคำอธิษฐานของตัวเองจาก localStorage
+        // ดึงคำอธิษฐานของตัวเองจาก localStorage (ถ้ามี)
         const myWishIds = JSON.parse(localStorage.getItem('myWishes') || '[]')
         
         console.log('My Wish IDs from localStorage:', myWishIds)
         
-        if (myWishIds.length === 0) {
-          console.log('No wish IDs found in localStorage')
-          setWishes([])
-          setLoading(false)
-          return
-        }
-
-        const url = `/api/wishes/map?myWishIds=${myWishIds.join(',')}`
+        // สร้าง URL - ถ้ามี myWishIds ให้ส่งไป ถ้าไม่มีให้ดึงทั้งหมด
+        const url = myWishIds.length > 0 
+          ? `/api/wishes/map?myWishIds=${myWishIds.join(',')}`
+          : `/api/wishes/map`
+        
         console.log('Fetching map data from:', url)
         
         const response = await fetch(url)
@@ -207,6 +204,9 @@ export default function KrathongMap({ onBack }: { onBack: () => void }) {
         <p className="text-sm md:text-base text-gray-300">ดูว่าคุณลอยกระทงจากที่ไหนบ้าง</p>
         <p className="text-xs md:text-sm text-gray-400 mt-2">
           กระทงที่ลอยแล้ว: {wishes.length} ใบ
+          {wishes.length > 0 && (
+            <span className="ml-2 text-xs">(แสดงข้อมูลทั้งหมดจากฐานข้อมูล)</span>
+          )}
         </p>
       </div>
 
