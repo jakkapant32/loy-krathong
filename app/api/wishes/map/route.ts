@@ -24,10 +24,10 @@ export async function GET(request: NextRequest) {
 
     // ดึง wishes ทั้งหมดที่มี location (ไม่ว่าจะมี coordinates หรือไม่)
     // Frontend จะแปลง location string เป็น coordinates เอง
+    // location เป็น required field อยู่แล้ว ไม่ต้องเช็ค null
     const wishes = await prisma.wish.findMany({
       where: {
         id: { in: wishIds },
-        location: { not: null }, // ต้องมี location อย่างน้อย
       },
       orderBy: { createdAt: 'desc' },
       take: 1000, // จำกัดจำนวนสำหรับแผนที่
