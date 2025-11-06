@@ -11,46 +11,55 @@ export async function GET(request: NextRequest) {
     const limit = parseInt(searchParams.get('limit') || '50')
     const myWishIds = searchParams.get('myWishIds') // รายการ wish IDs ที่ผู้ใช้ลอยเอง
 
-    let whereClause: any = {}
-
-    // ถ้ามี myWishIds ให้แสดงเฉพาะของตัวเอง
-    if (myWishIds) {
-      const wishIds = myWishIds.split(',').filter(id => id.trim())
-      if (wishIds.length > 0) {
-        whereClause.id = { in: wishIds }
-      } else {
-        // ถ้าไม่มี wish IDs ให้ return empty array
-        return NextResponse.json({ success: true, wishes: [] })
-      }
-    } else {
-      // ถ้าไม่มี myWishIds ให้ return empty (ไม่แสดงอะไรเลย)
+    // ถ้าไม่มี myWishIds ให้ return empty array (ไม่แสดงอะไรเลย)
+    if (!myWishIds) {
       return NextResponse.json({ success: true, wishes: [] })
     }
 
-    const wishes = await prisma.wish.findMany({
-      where: whereClause,
-      orderBy: { createdAt: 'desc' },
-      take: limit,
-      select: {
-        id: true,
-        name: true,
-        wish: true,
-        krathong: true,
-        location: true,
-        locationLat: true,
-        locationLng: true,
-        isCouple: true,
-        partnerName: true,
-        partnerWish: true,
-        createdAt: true,
-      },
-    })
+    const wishIds = myWishIds.split(',').filter(id => id.trim())
+    if (wishIds.length === 0) {
+      // ถ้าไม่มี wish IDs ให้ return empty array
+      return NextResponse.json({ success: true, wishes: [] })
+    }
 
-    return NextResponse.json({ success: true, wishes })
+    // ตรวจสอบ database connection
+    try {
+      const wishes = await prisma.wish.findMany({
+        where: {
+          id: { in: wishIds },
+        },
+        orderBy: { createdAt: 'desc' },
+        take: limit,
+        select: {
+          id: true,
+          name: true,
+          wish: true,
+          krathong: true,
+          location: true,
+          locationLat: true,
+          locationLng: true,
+          isCouple: true,
+          partnerName: true,
+          partnerWish: true,
+          createdAt: true,
+        },
+      })
+
+      return NextResponse.json({ success: true, wishes })
+    } catch (dbError) {
+      console.error('Database error:', dbError)
+      // ถ้า database error ให้ return empty array แทน error
+      return NextResponse.json({ success: true, wishes: [] })
+    }
   } catch (error) {
     console.error('Error fetching wishes:', error)
+    // Log more details for debugging
+    if (error instanceof Error) {
+      console.error('Error message:', error.message)
+      console.error('Error stack:', error.stack)
+    }
     return NextResponse.json(
-      { success: false, error: 'Failed to fetch wishes' },
+      { success: false, error: 'Failed to fetch wishes', details: error instanceof Error ? error.message : 'Unknown error' },
       { status: 500 }
     )
   }
@@ -98,8 +107,13 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ success: true, wish: newWish }, { status: 201 })
   } catch (error) {
     console.error('Error creating wish:', error)
+    // Log more details for debugging
+    if (error instanceof Error) {
+      console.error('Error message:', error.message)
+      console.error('Error stack:', error.stack)
+    }
     return NextResponse.json(
-      { success: false, error: 'Failed to create wish' },
+      { success: false, error: 'Failed to create wish', details: error instanceof Error ? error.message : 'Unknown error' },
       { status: 500 }
     )
   }
