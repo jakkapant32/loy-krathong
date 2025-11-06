@@ -23,29 +23,47 @@ export async function GET(request: NextRequest) {
     }
     // ถ้าไม่มี myWishIds ให้ดึงทั้งหมด (whereClause จะยังคงว่างเปล่า)
 
-    // ดึง wishes ทั้งหมดที่มี location (ไม่ว่าจะมี coordinates หรือไม่)
-    // Frontend จะแปลง location string เป็น coordinates เอง
-    // location เป็น required field อยู่แล้ว ไม่ต้องเช็ค null
-    // ไม่ส่ง wish field เพื่อไม่แสดงข้อความคำอธิษฐาน
-    const wishes = await prisma.wish.findMany({
-      where: whereClause,
-      orderBy: { createdAt: 'desc' },
-      take: 1000, // จำกัดจำนวนสำหรับแผนที่
-      select: {
-        id: true,
-        name: true,
-        // ไม่ส่ง wish field เพื่อไม่แสดงข้อความคำอธิษฐาน
-        krathong: true,
-        location: true,
-        locationLat: true,
-        locationLng: true,
-        isCouple: true,
-        partnerName: true,
-        createdAt: true,
-      },
-    })
+    // ตรวจสอบ database connection ก่อน
+    try {
+      // ดึง wishes ทั้งหมดที่มี location (ไม่ว่าจะมี coordinates หรือไม่)
+      // Frontend จะแปลง location string เป็น coordinates เอง
+      // location เป็น required field อยู่แล้ว ไม่ต้องเช็ค null
+      // ไม่ส่ง wish field เพื่อไม่แสดงข้อความคำอธิษฐาน
+      const wishes = await prisma.wish.findMany({
+        where: whereClause,
+        orderBy: { createdAt: 'desc' },
+        take: 1000, // จำกัดจำนวนสำหรับแผนที่
+        select: {
+          id: true,
+          name: true,
+          // ไม่ส่ง wish field เพื่อไม่แสดงข้อความคำอธิษฐาน
+          krathong: true,
+          location: true,
+          locationLat: true,
+          locationLng: true,
+          isCouple: true,
+          partnerName: true,
+          createdAt: true,
+        },
+      })
 
-    return NextResponse.json({ success: true, wishes })
+      return NextResponse.json({ success: true, wishes })
+    } catch (dbError) {
+      console.error('Database query error:', dbError)
+      if (dbError instanceof Error) {
+        console.error('Database error message:', dbError.message)
+        console.error('Database error stack:', dbError.stack)
+      }
+      // ถ้า database error ให้ return empty array แทน error
+      return NextResponse.json(
+        { 
+          success: true, 
+          wishes: [],
+          error: dbError instanceof Error ? dbError.message : 'Database error'
+        },
+        { status: 200 }
+      )
+    }
   } catch (error) {
     console.error('Error fetching map data:', error)
     // Log more details for debugging
