@@ -48,9 +48,19 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ success: true, wishes })
   } catch (error) {
     console.error('Error fetching map data:', error)
+    // Log more details for debugging
+    if (error instanceof Error) {
+      console.error('Error message:', error.message)
+      console.error('Error stack:', error.stack)
+    }
+    // ถ้า database error ให้ return empty array แทน error เพื่อไม่ให้แผนที่พัง
     return NextResponse.json(
-      { success: false, error: 'Failed to fetch map data' },
-      { status: 500 }
+      { 
+        success: true, 
+        wishes: [],
+        error: error instanceof Error ? error.message : 'Unknown error'
+      },
+      { status: 200 } // เปลี่ยนเป็น 200 แทน 500 เพื่อไม่ให้ frontend พัง
     )
   }
 }
