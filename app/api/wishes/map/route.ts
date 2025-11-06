@@ -13,25 +13,10 @@ export async function GET(request: NextRequest) {
 
     // ตรวจสอบ database connection ก่อน
     try {
-      // สร้าง where clause - ถ้ามี myWishIds ให้กรองตาม ID
-      let whereClause: any = undefined
-      
-      if (myWishIds) {
-        const wishIds = myWishIds.split(',').filter(id => id.trim())
-        if (wishIds.length > 0) {
-          whereClause = { id: { in: wishIds } }
-        }
-        // ถ้า myWishIds ว่างเปล่า ให้ whereClause เป็น undefined (ดึงทั้งหมด)
-      }
-      // ถ้าไม่มี myWishIds ให้ whereClause เป็น undefined (ดึงทั้งหมด)
-
-      // ดึง wishes ทั้งหมดที่มี location (ไม่ว่าจะมี coordinates หรือไม่)
-      // Frontend จะแปลง location string เป็น coordinates เอง
-      // location เป็น required field อยู่แล้ว ไม่ต้องเช็ค null
-      // ไม่ส่ง wish field เพื่อไม่แสดงข้อความคำอธิษฐาน
-      const queryOptions: any = {
-        orderBy: { createdAt: 'desc' },
-        take: 1000, // จำกัดจำนวนสำหรับแผนที่
+      // สร้าง base query options
+      const baseOptions = {
+        orderBy: { createdAt: 'desc' } as const,
+        take: 1000,
         select: {
           id: true,
           name: true,
@@ -46,12 +31,26 @@ export async function GET(request: NextRequest) {
         },
       }
 
-      // เพิ่ม where clause เฉพาะเมื่อมี
-      if (whereClause) {
-        queryOptions.where = whereClause
+      // ดึง wishes - ถ้ามี myWishIds ให้กรองตาม ID
+      let wishes
+      if (myWishIds) {
+        const wishIds = myWishIds.split(',').filter(id => id.trim())
+        if (wishIds.length > 0) {
+          // กรองตาม ID
+          wishes = await prisma.wish.findMany({
+            ...baseOptions,
+            where: {
+              id: { in: wishIds },
+            },
+          })
+        } else {
+          // ถ้า myWishIds ว่างเปล่า ให้ดึงทั้งหมด
+          wishes = await prisma.wish.findMany(baseOptions)
+        }
+      } else {
+        // ถ้าไม่มี myWishIds ให้ดึงทั้งหมด
+        wishes = await prisma.wish.findMany(baseOptions)
       }
-
-      const wishes = await prisma.wish.findMany(queryOptions)
 
       return NextResponse.json({ success: true, wishes })
     } catch (dbError) {
